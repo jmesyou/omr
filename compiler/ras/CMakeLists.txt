@@ -23,6 +23,9 @@ compiler_library(ras
 	${CMAKE_CURRENT_LIST_DIR}/CallStack.cpp
 	${CMAKE_CURRENT_LIST_DIR}/CFGChecker.cpp
 	${CMAKE_CURRENT_LIST_DIR}/BinaryGraphWriter.cpp
+	${CMAKE_CURRENT_LIST_DIR}/XMLGraphWriter.cpp
+	${CMAKE_CURRENT_LIST_DIR}/GraphWriter.cpp
+	${CMAKE_CURRENT_LIST_DIR}/DataSink.cpp
 	${CMAKE_CURRENT_LIST_DIR}/Debug.cpp
 	${CMAKE_CURRENT_LIST_DIR}/DebugCounter.cpp
 	${CMAKE_CURRENT_LIST_DIR}/ILValidationRules.cpp

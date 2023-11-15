@@ -408,6 +408,8 @@ OMR::CodeGenPhase::performInstructionSelectionPhase(TR::CodeGenerator * cg, TR::
    if (comp->getOption(TR_TraceCG))
       comp->dumpMethodTrees("Pre Instruction Selection Trees");
 
+   comp->getGraphWriter()->complete();
+
    TR::LexicalMemProfiler mp(phase->getName(), comp->phaseMemProfiler());
    LexicalTimer pt(phase->getName(), comp->phaseTimer());
 

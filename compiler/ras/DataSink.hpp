@@ -9,27 +9,18 @@
 class DataSink {
   public:
     virtual void write(uint8_t byte) = 0;
-    virtual void write(std::string string) = 0;
-    static std::unique_ptr<DataSink> getSink();
-};
-
-class EmptySink : public DataSink {
-  public:
-    virtual void write(uint8_t byte) override {
-      return;
-    }
-
-    virtual void write(std::string string) override {
-      return;
-    }
+    virtual void write(std::string && string) = 0;
+    static DataSink * getSink();
 };
 
 class FileSink : DataSink {
-
-};
-
-class StreamSink : DataSink {
-
+  public:
+    FileSink(std::string && filename);
+    ~FileSink();
+    virtual void write(uint8_t byte) override;
+    virtual void write(std::string && string) override;
+  private:
+    ::FILE * file;
 };
 
 #endif

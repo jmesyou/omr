@@ -69,7 +69,7 @@ namespace OMR { typedef OMR::Compilation CompilationConnector; }
 #include "ras/Debug.hpp"
 #include "ras/DebugCounter.hpp"
 #include "ras/ILValidationStrategies.hpp"
-#include "ras/BinaryGraphWriter.hpp"
+#include "ras/GraphWriter.hpp"
 
 
 
@@ -1147,6 +1147,8 @@ public:
 
    BinaryGraphWriter& getBinaryGraphWriter() { return _binaryGraphWriter; }
 
+   GraphWriter * getGraphWriter() { return _graphWriter; }
+
 private:
    void resetVisitCounts(vcount_t, TR::ResolvedMethodSymbol *);
    int16_t restoreInlineDepthUntil(int32_t stopIndex, TR_ByteCodeInfo &currentInfo);
@@ -1355,10 +1357,14 @@ private:
    TypeLayoutMap _typeLayoutMap;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
    TR_CallTarget *_currentILGenCallTarget;
 =======
    BinaryGraphWriter _binaryGraphWriter;
 >>>>>>> ad34e2590 (wip: igv support)
+=======
+   GraphWriter * _graphWriter;
+>>>>>>> 725a2ba07 (igv: addition of xml support)
 
    /*
     * This must be last

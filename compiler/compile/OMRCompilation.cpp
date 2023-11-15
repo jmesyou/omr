@@ -289,7 +289,7 @@ OMR::Compilation::Compilation(
    _typeLayoutMap((LayoutComparator()), LayoutAllocator(self()->region())),
    _currentILGenCallTarget(NULL),
    _tlsManager(*self()),
-   _binaryGraphWriter(self())
+   _graphWriter(GraphWriter::getGraphWriter(id, compilee, options))
    {
    if (target != NULL)
       {
@@ -1903,11 +1903,10 @@ void OMR::Compilation::dumpMethodTrees(const char *title, TR::ResolvedMethodSymb
    if (self()->getOutFile() == NULL)
       return;
 
-
-
    if (methodSymbol == 0) methodSymbol = _methodSymbol;
 
-   self()->getBinaryGraphWriter().writeGraph(title, methodSymbol);
+   auto string = std::string(title);
+   self()->getGraphWriter()->writeGraph(string, self(), methodSymbol);
 
    self()->getDebug()->printIRTrees(self()->getOutFile(), title, methodSymbol);
 

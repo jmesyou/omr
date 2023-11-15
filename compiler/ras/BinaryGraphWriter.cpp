@@ -20,7 +20,6 @@
  *******************************************************************************/
 
 #include "BinaryGraphWriter.hpp"
-#include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <tuple>
@@ -39,19 +38,6 @@
 #include "il/OMRILOps.hpp"
 #include "control/OMROptions.hpp"
 #include "infra/ILWalk.hpp"
-
-template<typename ... Args>
-inline std::string string_format( const std::string& format, Args ... args )
-{
-    int size_s = std::snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
-    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
-    auto size = static_cast<size_t>( size_s );
-    char buf[size];
-    std::snprintf( buf, size, format.c_str(), args ... );
-    return std::string(buf); // We don't want the '\0' inside
-}
-
-std::atomic<int32_t> nextAvailableCompilationId{0};
 
 const uint32_t BUFFER_SIZE_BYTES = 4096;
 
@@ -74,11 +60,6 @@ const int8_t KLASS = 0x0;
 const int8_t ENUM_KLASS = 0x1;
 
 static PoolEnumClass InputEdgeType = {"InputEdgeType", {"values"}};
-
-int32_t getNextAvailableCompilationId() {
-  int32_t id = nextAvailableCompilationId.fetch_add(1);
-  return id;
-}
 
 void BinaryGraphWriter::writeStringProperty(StringProperty & property) {
   TR_ASSERT(property.key != nullptr, "String property key cannot be null");
@@ -121,7 +102,7 @@ void BinaryGraphWriter::initialize(TR::ResolvedMethodSymbol * symbol) {
 
   TR_ASSERT(_symbol != NULL, "method symbol during debug cannot be null!");
 
-  auto id = getNextAvailableCompilationId();
+  auto id = 0;
   auto method = _symbol->getResolvedMethod();
 
   std::string signature = _comp->getDebug()->signature(symbol);
@@ -657,7 +638,7 @@ void BinaryGraphWriter::writePoolMethod(TR::ResolvedMethodSymbol * symbol) {
     writePoolReference(POOL_METHOD, id);
     return;
   }
-  auto id = getNextAvailableCompilationId();
+  auto id  = 0;
   writeInt8(POOL_NEW);
   writeInt16(id);
 

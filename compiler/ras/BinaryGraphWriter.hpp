@@ -23,19 +23,8 @@
 #define OMR_BINARYGRAPHWRITER_INCL
 
 #include <map>
-#include "Debug.hpp"
-#include "env/FilePointerDecl.hpp"
-#include "env/OMRIO.hpp"
-#include "optimizer/Optimizations.hpp"
-
-namespace TR {
-  class Compilation;
-  class Block;
-  class Optimizer;
-  class Node;
-  class TreeTop;
-  class ResolvedMethodSymbol;
-}
+#include <vector>
+#include "GraphWriter.hpp"
 
 template <class T> class Pool {
   std::map<T, uint16_t> map;
@@ -57,33 +46,11 @@ template <class T> class Pool {
 
 class BinaryGraphWriter;
 
-class StringProperty {
-  public:
-    StringProperty(std::string k, std::string v) : key(k), value(v) {}
-    friend class BinaryGraphWriter;
-
-  private:
-    std::string key;
-    std::string value;
-};
-
 class PoolEnumClass {
   public:
     std::string name;
     std::vector<std::string> values;
     PoolEnumClass(std::string _name, std::vector<std::string> _values): name(_name), values(_values) {}
-};
-
-
-struct InputEdgeInfo {
-  bool isIndirect;
-  std::string name;
-  int32_t type;
-};
-
-struct OutputEdgeInfo {
-  bool isIndirect;
-  std::string name;
 };
 
 class BinaryGraphWriter {
