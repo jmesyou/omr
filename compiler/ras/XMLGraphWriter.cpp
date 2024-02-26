@@ -89,8 +89,17 @@ std::string getNodeName(TR::Compilation * compilation, TR::Node * node) {
     case TR::sconst:
       name = string_format("%s %d", name.c_str(), node->getShortInt());
       break;
+    case TR::bload:
+    case TR::sload:
     case TR::iload:
+    case TR::lload:
+    case TR::fload:
+    case TR::dload:
+    case TR::bstore:
+    case TR::sstore:
     case TR::istore:
+    case TR::fstore:
+    case TR::dstore:
       name = string_format("%s %s", name.c_str(), node->getSymbolReference()->getName(compilation->getDebug()));
       break;
     default:
