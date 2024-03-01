@@ -299,17 +299,28 @@ void writeBlocks(XMLGraphWriter & writer, TR::Compilation * compilation, TR::CFG
     openHeader(writer, string_format("block name='%d'", blockNumber));
 
     openHeader(writer, "nodes");
-    for (TR::PreorderNodeIterator iter(block->getEntry(), compilation); iter != NULL; ++iter) {
-      auto node = iter.currentNode();
-      auto index = node->getGlobalIndex();
-      if (nodeSet.count(index) > 0)
-        continue;
 
-      nodeSet.emplace(index);
-      writeInlineElement(writer, string_format("node id='%d'", index));
+    auto entry = block->getEntry();
+    auto exit = block->getExit();
+    TR_ASSERT(exit->getNode()->getOpCodeValue() == TR::BBEnd, "The exit treetop must be a BBEnd");
 
-      if (node->getOpCodeValue() == TR::BBEnd) {
-        break;
+    std::vector<TR::TreeTop *> treetops{};
+
+    for (TR::TreeTopIterator it(entry, compilation); it != exit; ++it) {
+      auto tt = it.currentTree();
+      treetops.push_back(tt);
+    }
+    treetops.push_back(exit);
+
+    for (auto tt: treetops) {
+      for (TR::PreorderNodeIterator it(tt, compilation); it.currentTree() == tt; ++it) {
+        auto node = it.currentNode();
+        auto index = node->getGlobalIndex();
+        if (nodeSet.count(index) > 0)
+          continue;
+
+        nodeSet.emplace(index);
+        writeInlineElement(writer, string_format("node id='%d'", index));
       }
     }
     closeHeader(writer, "nodes");
