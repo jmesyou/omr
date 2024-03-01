@@ -786,6 +786,7 @@ TR::OptionTable OMR::Options::_jitOptions[] = {
    {"enableValueTracing",                 "O\tenable runtime value tracing (experimental)", SET_OPTION_BIT(TR_EnableValueTracing), "F"},
    {"enableVirtualPersistentMemory",      "M\tenable persistent memory to be allocated using virtual memory allocators",
                                           SET_OPTION_BIT(TR_EnableVirtualPersistentMemory), "F", NOT_IN_SUBSET},
+   {"enableVisualTrees",                  "L\tdump trees after each compilation phase to IGV format", SET_OPTION_BIT(TR_VisualizeTrees), "P"},
    {"enableVpicForResolvedVirtualCalls",  "O\tenable PIC for resolved virtual calls",         SET_OPTION_BIT(TR_EnableVPICForResolvedVirtualCalls), "F"},
    {"enableYieldVMAccess",                "O\tenable yielding of VM access when GC is waiting", SET_OPTION_BIT(TR_EnableYieldVMAccess), "F"},
    {"enableZEpilogue",                    "O\tenable 64-bit 390 load-multiple breakdown.", SET_OPTION_BIT(TR_Enable39064Epilogue), "F"},

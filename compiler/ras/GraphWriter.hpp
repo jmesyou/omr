@@ -9,7 +9,6 @@
 #include "DataSink.hpp"
 #include "env/FilePointerDecl.hpp"
 #include "env/OMRIO.hpp"
-#include "optimizer/Optimizations.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-security"
@@ -27,6 +26,8 @@ inline std::string string_format( const std::string& format, Args ... args )
 
 #pragma GCC diagnostic pop
 
+class TR_BlockStructure;
+class TR_RegionStructure;
 namespace TR {
   class Compilation;
   class Block;
@@ -56,6 +57,21 @@ struct StringProperty {
 struct IntegerProperty {
   std::string name;
   int32_t     value;
+};
+
+struct Properties {
+  std::vector<IntegerProperty> integers;
+  std::vector<StringProperty>  strings;
+
+  Properties add(StringProperty && property) {
+    strings.emplace_back(property);
+    return *this;
+  }
+
+  Properties add(IntegerProperty && property) {
+    integers.emplace_back(property);
+    return *this;
+  }
 };
 
 class GraphWriter {

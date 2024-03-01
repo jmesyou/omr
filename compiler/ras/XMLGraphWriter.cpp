@@ -1,6 +1,7 @@
 
 #include "XMLGraphWriter.hpp"
 
+#include <memory>
 #include <set>
 #include <atomic>
 #include "env/FilePointerDecl.hpp"
@@ -14,42 +15,12 @@
 #include "il/OMRILOps.hpp"
 #include "control/OMROptions.hpp"
 #include "infra/ILWalk.hpp"
-
-void writeStringProperty(XMLGraphWriter & writer, StringProperty & property) {
-  writer.getSink()->write(string_format("<p name='%s'>", property.key.c_str()));
-  writer.getSink()->write(string_format("%s", property.value.c_str()));
-  writer.getSink()->write("</p>\n");
-}
-
-void writeIntegerProperty(XMLGraphWriter & writer, IntegerProperty & property) {
-  writer.getSink()->write(string_format("<p name='%s'>", property.name.c_str()));
-  writer.getSink()->write(string_format("%d", property.value));
-  writer.getSink()->write("</p>\n");
-}
-
-std::string getCategory(TR::Node * node) {
-  auto opcode = node->getOpCode();
-
-  if (opcode.isTreeTop())
-    return "control";
-
-  return "data";
-}
-
-void writeProperties(XMLGraphWriter & writer, std::vector<StringProperty> && strings, std::vector<IntegerProperty> && integers) {
-  writer.getSink()->write("<properties>\n");
-  for (auto s : strings) {
-    writeStringProperty(writer, s);
-  }
-  for (auto i: integers) {
-    writeIntegerProperty(writer, i);
-  }
-  writer.getSink()->write("</properties>\n");
-}
+#include "optimizer/Optimizations.hpp"
+#include "optimizer/Structure.hpp"
 
 void replace(std::string & string, std::string target, std::string replacement) {
   size_t index = 0;
-  auto n = replacement.size();
+  auto n = target.size();
   while (true) {
       /* Locate the substring to replace. */
       index = string.find(target, index);
@@ -73,6 +44,64 @@ void sanitizeXML(std::string & string) {
   replace(string, ">", "&gt;");
 }
 
+void sanitize(std::string & string) {
+  sanitizeSlashes(string);
+  sanitizeXML(string);
+}
+
+void openHeader(XMLGraphWriter & writer, std::string str) {
+  sanitize(str);
+  writer.getSink()->write(string_format("<%s>\n", str.c_str()));
+}
+
+void closeHeader(XMLGraphWriter & writer, std::string str) {
+  sanitize(str);
+  writer.getSink()->write(string_format("</%s>\n", str.c_str()));
+}
+
+void writeInlineElement(XMLGraphWriter & writer, std::string str) {
+  sanitize(str);
+  writer.getSink()->write(string_format("<%s/>\n", str.c_str()));
+}
+
+void writeString(XMLGraphWriter & writer, std::string str) {
+  auto s = str;
+  sanitizeXML(s);
+  writer.getSink()->write(s.c_str());
+}
+
+void writeStringProperty(XMLGraphWriter & writer, StringProperty & property) {
+  openHeader(writer, string_format("p name='%s'", property.key.c_str()));
+  writeString(writer, property.value);
+  closeHeader(writer, "p");
+}
+
+void writeIntegerProperty(XMLGraphWriter & writer, IntegerProperty & property) {
+  openHeader(writer, string_format("p name='%s'", property.name.c_str()));
+  writeString(writer, string_format("%d", property.value));
+  closeHeader(writer, "p");
+}
+
+std::string getCategory(TR::Node * node) {
+  auto opcode = node->getOpCode();
+
+  if (opcode.isTreeTop())
+    return "control";
+
+  return "data";
+}
+
+void writeProperties(XMLGraphWriter & writer, Properties & properties) {
+  openHeader(writer, "properties");
+  for (auto s : properties.strings) {
+    writeStringProperty(writer, s);
+  }
+  for (auto i: properties.integers) {
+    writeIntegerProperty(writer, i);
+  }
+  closeHeader(writer,"properties");
+}
+
 std::string getNodeName(TR::Compilation * compilation, TR::Node * node) {
   std::string name = node->getOpCode().getName();
 
@@ -89,24 +118,44 @@ std::string getNodeName(TR::Compilation * compilation, TR::Node * node) {
     case TR::sconst:
       name = string_format("%s %d", name.c_str(), node->getShortInt());
       break;
+    case TR::aload:
     case TR::bload:
     case TR::sload:
     case TR::iload:
     case TR::lload:
     case TR::fload:
     case TR::dload:
+    case TR::aloadi:
+    case TR::bloadi:
+    case TR::sloadi:
+    case TR::iloadi:
+    case TR::lloadi:
+    case TR::floadi:
+    case TR::dloadi:
+    case TR::loadaddr:
     case TR::bstore:
     case TR::sstore:
     case TR::istore:
     case TR::fstore:
     case TR::dstore:
+    case TR::icalli:
+    case TR::icall:
+    case TR::lcalli:
+    case TR::lcall:
+    case TR::fcalli:
+    case TR::fcall:
+    case TR::dcalli:
+    case TR::dcall:
+    case TR::acalli:
+    case TR::acall:
+    case TR::calli:
+    case TR::call:
       name = string_format("%s %s", name.c_str(), node->getSymbolReference()->getName(compilation->getDebug()));
       break;
     default:
       return name;
   }
 
-  sanitizeXML(name);
   return name;
 }
 
@@ -123,19 +172,14 @@ bool XMLGraphWriter::initialize(TR::Compilation * compilation, TR::ResolvedMetho
     string_format("TestarossaCompilation-%d[%s][%s].xml", id, signature.c_str(), hotness)
   );
 
-  sink->write("<graphDocument>\n");
-  sink->write("<group>\n");
+  openHeader(*this, "graphDocument");
+  openHeader(*this, "group");
 
-  sanitizeXML(signature);
-  writeProperties(
-    *this,
-    {
-      {"name", signature}
-    },
-    {
-      {"compilationId", id}
-    }
-  );
+  auto properties = Properties{}
+    .add(StringProperty{"name", signature})
+    .add(IntegerProperty{"compilationId", id});
+
+  writeProperties(*this, properties);
 
   return true;
 }
@@ -144,51 +188,81 @@ XMLGraphWriter::XMLGraphWriter(int32_t id, TR_ResolvedMethod * method, TR::Optio
 
 XMLGraphWriter::~XMLGraphWriter() {}
 
-void writeNode(XMLGraphWriter & writer, TR::Compilation * compilation, TR::Node * node) {
-  writer.getSink()->write(
-    string_format("<node id='%d'>\n", node->getGlobalIndex())
-  );
+Properties getBlockStartProperties(Properties & properties, TR::Compilation * compilation, TR:: Node * node) {
+  TR_ASSERT(node->getOpCodeValue() == TR::BBStart, "Must be BBStart");
+  TR::Block * block = node->getBlock();
 
-  writeProperties(
-    writer,
-    {
-      {"name",     getNodeName(compilation, node)},
-      {"category", getCategory(node)}
-    },
-    {
-      {"idx", (int32_t) node->getGlobalIndex()}
+  if (block->getFrequency() >= 0)
+    properties.add(IntegerProperty{"frequency", block->getFrequency()});
+  if (block->isExtensionOfPreviousBlock())
+    properties.add(StringProperty{"isExtension", "true"});
+
+  if (block->isSuperCold())
+    properties.add(StringProperty{"isSuperCold", "true"});
+  else if (block->isCold())
+    properties.add(StringProperty{"isCold", "true"});
+
+  if(block->isLoopInvariantBlock())
+    properties.add(StringProperty{"isLoopInvariant", "true"});
+
+  TR_BlockStructure *blockStructure = block->getStructureOf();
+  if (compilation->getFlowGraph()->getStructure() && blockStructure) {
+    TR_Structure * parent = blockStructure->getParent();
+    while (parent) {
+      TR_RegionStructure *region = parent->asRegion();
+      if (region->isNaturalLoop() || region->containsInternalCycles()) {
+        properties.add(IntegerProperty{"loop", region->getNumber()});
+        break;
+      }
+      parent = parent->getParent();
     }
-  );
-  writer.getSink()->write("</node>\n");
+    TR_BlockStructure *dupBlock = blockStructure->getDuplicatedBlock();
+    if (dupBlock)
+      properties.add(IntegerProperty{"duplicate", dupBlock->getNumber()});
+  }
+  return properties;
+}
+
+Properties getOtherNodeProperties(Properties & properties, TR::Compilation * compilation, TR::Node * node) {
+  switch (node->getOpCodeValue()) {
+    case TR::BBStart:
+      return getBlockStartProperties(properties, compilation, node);
+    default:
+      return properties;
+  }
+}
+
+Properties getNodeProperties(TR::Compilation * compilation, TR::Node * node) {
+  auto common = Properties{}
+    .add(StringProperty{"name",     getNodeName(compilation, node)})
+    .add(StringProperty{"category", getCategory(node)})
+    .add(IntegerProperty{"idx",      (int32_t) node->getGlobalIndex()});
+
+  return getOtherNodeProperties(common, compilation, node);
+}
+
+void writeNode(XMLGraphWriter & writer, TR::Compilation * compilation, TR::Node * node) {
+  openHeader(writer, string_format("node id='%d'\n", node->getGlobalIndex()));
+
+  auto properties = getNodeProperties(compilation, node);
+  writeProperties(writer, properties);
+  closeHeader(writer, "node");
 }
 
 void writeTreeTop(XMLGraphWriter & writer, TR::Compilation * compilation, TR::TreeTop * tt) {
   auto node = tt->getNode();
-  writer.getSink()->write(
-    string_format("<node id='%d'>\n", node->getGlobalIndex())
-  );
-
-  writeProperties(
-    writer,
-    {
-      {"name",     getNodeName(compilation, node)},
-      {"category", getCategory(node)}
-    },
-    {
-      {"idx", (int32_t) node->getGlobalIndex()}
-    }
-  );
-  writer.getSink()->write("</node>\n");
+  writeNode(writer, compilation, node);
 }
 
 void writeEdge(XMLGraphWriter & writer, int32_t from, int32_t to, std::string && type, int index) {
-  writer.getSink()->write(
-    string_format("<edge from='%d' to='%d' type='%s' index='%d'/>\n", from, to, type.c_str(), index)
+  writeInlineElement(
+    writer,
+    string_format("edge from='%d' to='%d' type='%s' index='%d'", from, to, type.c_str(), index)
   );
 }
 
 void writeEdges(XMLGraphWriter & writer, std::vector<TR::TreeTop *> treetops, std::vector<TR::Node *> nodes) {
-  writer.getSink()->write("<edges>\n");
+  openHeader(writer, "edges");
   for (auto tt : treetops) {
     auto node = tt->getNode();
     auto globalIndex = node->getGlobalIndex();
@@ -202,29 +276,29 @@ void writeEdges(XMLGraphWriter & writer, std::vector<TR::TreeTop *> treetops, st
 
     for (auto i = 0; i < node->getNumChildren(); i++) {
       auto child = node->getChild(i);
-      writeEdge(writer, node->getGlobalIndex(), child->getGlobalIndex(), "child", i);
+      writeEdge(writer, child->getGlobalIndex(), node->getGlobalIndex(), "child", i);
     }
   }
 
   for (auto node : nodes) {
     for (auto i = 0; i < node->getNumChildren(); i++) {
       auto child = node->getChild(i);
-      writeEdge(writer, node->getGlobalIndex(), child->getGlobalIndex(), "child", i);
+      writeEdge(writer, child->getGlobalIndex(), node->getGlobalIndex(), "child", i);
     }
   }
-  writer.getSink()->write("</edges>");
+  closeHeader(writer, "edges");
 }
 
 void writeBlocks(XMLGraphWriter & writer, TR::Compilation * compilation, TR::CFG * cfg) {
-  writer.getSink()->write("<controlFlow>\n");
+  openHeader(writer, "controlFlow");
 
   std::set<int32_t> nodeSet{};
   for (TR::AllBlockIterator iter(cfg, compilation); iter.currentBlock(); ++iter) {
     auto block = iter.currentBlock();
     auto blockNumber = block->getNumber();
-    writer.getSink()->write(string_format("<block name='%d'>\n", blockNumber));
+    openHeader(writer, string_format("block name='%d'", blockNumber));
 
-    writer.getSink()->write("<nodes>\n");
+    openHeader(writer, "nodes");
     for (TR::PreorderNodeIterator iter(block->getEntry(), compilation); iter != NULL; ++iter) {
       auto node = iter.currentNode();
       auto index = node->getGlobalIndex();
@@ -232,20 +306,21 @@ void writeBlocks(XMLGraphWriter & writer, TR::Compilation * compilation, TR::CFG
         continue;
 
       nodeSet.emplace(index);
-      writer.getSink()->write(string_format("<node id='%d'/>\n", index));
+      writeInlineElement(writer, string_format("node id='%d'", index));
 
-      if (node->getOpCodeValue() == TR::BBEnd)
+      if (node->getOpCodeValue() == TR::BBEnd) {
         break;
+      }
     }
-    writer.getSink()->write("</nodes>\n");
+    closeHeader(writer, "nodes");
 
-    writer.getSink()->write("<successors>\n");
+    openHeader(writer, "successors");
     TR::CFGEdgeList & successors = block->getSuccessors();
     for (auto succEdge = successors.begin(); succEdge != successors.end(); ++succEdge) {
       auto number = (*succEdge)->getTo()->getNumber();
       if (number == 1)
         continue;
-      writer.getSink()->write(string_format("<successor name='%d'/>\n", number));
+      writeInlineElement(writer, string_format("successor name='%d'", number));
     }
 
     auto exceptionSuccessors = block->getExceptionSuccessors();
@@ -254,25 +329,23 @@ void writeBlocks(XMLGraphWriter & writer, TR::Compilation * compilation, TR::CFG
       if (number == 1)
         continue;
 
-      writer.getSink()->write(string_format("<successor name='%d'/>\n", number));
+      writeInlineElement(writer, string_format("successor name='%d'", number));
     }
 
-    writer.getSink()->write("</successors>\n");
-
-    writer.getSink()->write("</block>\n");
+    closeHeader(writer, "successors");
+    closeHeader(writer, "block");
   }
-  writer.getSink()->write("</controlFlow>\n");
+  closeHeader(writer, "controlFlow");
 }
 
 void XMLGraphWriter::writeGraph(std::string & string, TR::Compilation * compilation, TR::ResolvedMethodSymbol * symbol) {
   if (!initialized)
     initialized = initialize(compilation, symbol);
 
-  sink->write(
-    string_format("<graph name = '%s'>\n", string.c_str())
-  );
+  openHeader(*this,string_format("graph name = '%s'", string.c_str()));
 
-  writeProperties(*this, {}, {});
+  auto properties = Properties{};
+  writeProperties(*this, properties);
 
   int32_t nodes_count = 0;
   auto firstTreeTop = symbol->getFirstTreeTop();
@@ -291,7 +364,7 @@ void XMLGraphWriter::writeGraph(std::string & string, TR::Compilation * compilat
     nodes.push_back(node);
   }
 
-  sink->write("<nodes>\n");
+  openHeader(*this, "nodes");
   for (auto tt: treetops) {
     writeTreeTop(*this, compilation, tt);
   }
@@ -299,12 +372,12 @@ void XMLGraphWriter::writeGraph(std::string & string, TR::Compilation * compilat
   for (auto node: nodes) {
     writeNode(*this, compilation, node);
   }
-  sink->write("</nodes>\n");
+  closeHeader(*this, "nodes");
 
   writeEdges(*this, treetops, nodes);
 
   writeBlocks(*this, compilation, symbol->getFlowGraph());
-  sink->write("</graph>\n");
+  closeHeader(*this, "graph");
 }
 
 
