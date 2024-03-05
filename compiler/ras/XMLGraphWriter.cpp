@@ -152,6 +152,15 @@ std::string getNodeName(TR::Compilation * compilation, TR::Node * node) {
     case TR::call:
       name = string_format("%s %s", name.c_str(), node->getSymbolReference()->getName(compilation->getDebug()));
       break;
+    case TR::aRegLoad:
+    case TR::bRegLoad:
+    case TR::sRegLoad:
+    case TR::iRegLoad:
+    case TR::fRegLoad:
+    case TR::lRegLoad:
+    case TR::dRegLoad:
+      name = string_format("%s %s", node->getRegister()->getRegisterName(compilation));
+      break;
     default:
       return name;
   }
