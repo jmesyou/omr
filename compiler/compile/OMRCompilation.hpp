@@ -1145,8 +1145,6 @@ public:
     */
    void setCurrentILGenCallTarget(TR_CallTarget *x) { _currentILGenCallTarget = x; }
 
-   BinaryGraphWriter& getBinaryGraphWriter() { return _binaryGraphWriter; }
-
    GraphWriter * getGraphWriter() { return _graphWriter; }
 
 private:
@@ -1356,15 +1354,8 @@ private:
    typedef std::map<TR_OpaqueClassBlock *, const TR::TypeLayout *, LayoutComparator, LayoutAllocator> TypeLayoutMap;
    TypeLayoutMap _typeLayoutMap;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
    TR_CallTarget *_currentILGenCallTarget;
-=======
-   BinaryGraphWriter _binaryGraphWriter;
->>>>>>> ad34e2590 (wip: igv support)
-=======
    GraphWriter * _graphWriter;
->>>>>>> 725a2ba07 (igv: addition of xml support)
 
    /*
     * This must be last

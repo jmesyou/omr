@@ -103,7 +103,6 @@
 #include "ras/ILValidationStrategies.hpp"
 #include "ras/ILValidator.hpp"
 #include "ras/IlVerifier.hpp"
-#include "ras/BinaryGraphWriter.hpp"
 #include "control/Recompilation.hpp"
 #include "runtime/CodeCacheExceptions.hpp"
 #include "ilgen/IlGen.hpp"
