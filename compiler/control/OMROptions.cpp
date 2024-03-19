@@ -3864,8 +3864,6 @@ OMR::Options::requiresLogFile()
    }
 
 
-void getTimeInSeconds(char *buf, size_t size);
-void getTRPID(char *buf, size_t size);
 
 
 void OMR::Options::openLogFile(int32_t idSuffix)

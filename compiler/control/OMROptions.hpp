@@ -48,6 +48,10 @@ namespace OMR { typedef OMR::Options OptionsConnector; }
 #include "optimizer/Optimizations.hpp"
 #include "ras/DebugCounter.hpp"
 
+void getTimeInSeconds(char *buf, size_t size);
+
+void getTRPID(char *buf, size_t size);
+
 namespace TR { class CFGNode; }
 
 namespace TR { class CompilationFilters; }

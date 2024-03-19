@@ -103,6 +103,7 @@
 #include "ras/ILValidationStrategies.hpp"
 #include "ras/ILValidator.hpp"
 #include "ras/IlVerifier.hpp"
+#include "ras/BinaryGraphWriter.hpp"
 #include "control/Recompilation.hpp"
 #include "runtime/CodeCacheExceptions.hpp"
 #include "ilgen/IlGen.hpp"
@@ -287,7 +288,8 @@ OMR::Compilation::Compilation(
    _bitVectorPool(self()),
    _typeLayoutMap((LayoutComparator()), LayoutAllocator(self()->region())),
    _currentILGenCallTarget(NULL),
-   _tlsManager(*self())
+   _tlsManager(*self()),
+   _binaryGraphWriter(self())
    {
    if (target != NULL)
       {
@@ -1901,7 +1903,11 @@ void OMR::Compilation::dumpMethodTrees(const char *title, TR::ResolvedMethodSymb
    if (self()->getOutFile() == NULL)
       return;
 
+
+
    if (methodSymbol == 0) methodSymbol = _methodSymbol;
+
+   self()->getBinaryGraphWriter().writeGraph(title, methodSymbol);
 
    self()->getDebug()->printIRTrees(self()->getOutFile(), title, methodSymbol);
 

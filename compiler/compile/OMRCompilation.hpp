@@ -69,6 +69,7 @@ namespace OMR { typedef OMR::Compilation CompilationConnector; }
 #include "ras/Debug.hpp"
 #include "ras/DebugCounter.hpp"
 #include "ras/ILValidationStrategies.hpp"
+#include "ras/BinaryGraphWriter.hpp"
 
 
 
@@ -1144,6 +1145,8 @@ public:
     */
    void setCurrentILGenCallTarget(TR_CallTarget *x) { _currentILGenCallTarget = x; }
 
+   BinaryGraphWriter& getBinaryGraphWriter() { return _binaryGraphWriter; }
+
 private:
    void resetVisitCounts(vcount_t, TR::ResolvedMethodSymbol *);
    int16_t restoreInlineDepthUntil(int32_t stopIndex, TR_ByteCodeInfo &currentInfo);
@@ -1351,7 +1354,11 @@ private:
    typedef std::map<TR_OpaqueClassBlock *, const TR::TypeLayout *, LayoutComparator, LayoutAllocator> TypeLayoutMap;
    TypeLayoutMap _typeLayoutMap;
 
+<<<<<<< HEAD
    TR_CallTarget *_currentILGenCallTarget;
+=======
+   BinaryGraphWriter _binaryGraphWriter;
+>>>>>>> ad34e2590 (wip: igv support)
 
    /*
     * This must be last
